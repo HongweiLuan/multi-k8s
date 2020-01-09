@@ -14,7 +14,7 @@ after_success:
   - docker build -t hluan/multi-server ./server
   - docker build -t hluan/multi-worker ./worker
   # Log in to the docker CLI
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin docker.io
   # take those images and push them to docker hub
   - docker push hluan/multi-client
   - docker push hluan/multi-nginx
