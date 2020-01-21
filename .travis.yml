@@ -1,36 +1,29 @@
 sudo: required
 services:
   - docker
+env:
+  global:
+    - SHA=$(git rev-parse HEAD)
+    - CLOUDSDK_CORE_DISABLE_PROMPTS=1
 before_install:
   - openssl aes-256-cbc -K $encrypted_0c35eebf403c_key -iv $encrypted_0c35eebf403c_iv -in service-account.json.enc -out service-account.json -d
   - curl https://sdk.cloud.google.com | bash > /dev/null;
   - source $HOME/google-cloud-sdk/path.bash.inc
   - gcloud components update kubectl
   - gcloud auth activate-service-account --key-file service-account.json
+  - gcloud config set project multi-k8s-265422
+  - gcloud config set compute/zone us-east1-b
+  - gcloud container clusters get-credentials multi-cluster
+  # Log in to the docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -t hluandeloitte/react-test -f ./client/Dockerfile.dev ./client
 
 script:
   - docker run -e CI=true hluandeloitte/react-test npm test
 
-after_success:
-  - docker build -t hluandeloitte/multi-client ./client
-  - docker build -t hluandeloitte/multi-nginx ./nginx
-  - docker build -t hluandeloitte/multi-server ./server
-  - docker build -t hluandeloitte/multi-worker ./worker
-  # Log in to the docker CLI
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin docker.io
-  # take those images and push them to docker hub
-  - docker push hluandeloitte/multi-client
-  - docker push hluandeloitte/multi-nginx
-  - docker push hluandeloitte/multi-server
-  - docker push hluandeloitte/multi-worker
-
 deploy:
-  provider: elasticbeanstalk
-  region: us-east-2
-  app: multi-docker
-  env: MultiDocker-env
-  bucket_name: elasticbeanstalk-us-east-2-627232598463
-  bucket_path: docker-multi
+  provider: script
+  script: bash ./deploy.sh
   on:
     branch: master
   access_key_id: $AWS_ACCESS_KEY
